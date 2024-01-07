@@ -1,1 +1,0 @@
-import{_ as s,o as t,c as o,B as r}from"./entry.a-EORooi.js";const c={},d={class:"prose-td"};function n(e,a){return t(),o("td",d,[r(e.$slots,"default",{},void 0,!0)])}const f=s(c,[["render",n],["__scopeId","data-v-575bdb23"]]);export{f as default};
