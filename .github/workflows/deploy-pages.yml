@@ -1,6 +1,7 @@
 name: Deploy to GitHub Pages
 
-#on:
+on:
+  workflow_dispatch:
 #  push:
 #    branches:
 #      - thoughts
