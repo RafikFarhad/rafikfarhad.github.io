@@ -1,14 +1,14 @@
 <template>
   <NuxtLayout>
     <main class="container mx-auto px-4">
-      <h1 class="text-2xl font-bold mb-4 dark:text-white">
-        CIDR Comparison Tool
+      <h1 class="text-2xl font-bold my-10 dark:text-white text-center">
+        Route Matcher Tool
       </h1>
       <div class="flex flex-col md:flex-row gap-4">
         <!-- Input IPs/CIDRs -->
         <div class="flex-1">
           <h2 class="text-lg font-semibold mb-2 dark:text-gray-200">
-            Input IPs/CIDRs
+            Destination IPs or CIDRs (Input)
           </h2>
           <textarea
             v-model="inputCidrs"
@@ -21,7 +21,7 @@
         <!-- Target CIDRs -->
         <div class="flex-1">
           <h2 class="text-lg font-semibold mb-2 dark:text-gray-200">
-            Target CIDRs
+            Route List (Target CIDRs)
           </h2>
           <textarea
             v-model="targetCidrs"
@@ -33,7 +33,9 @@
 
         <!-- Results -->
         <div class="flex-1">
-          <h2 class="text-lg font-semibold mb-2 dark:text-gray-200">Results</h2>
+          <h2 class="text-lg font-semibold mb-2 dark:text-gray-200">
+            Matching Networks/CIDRs
+          </h2>
           <div
             class="w-full h-80 p-2 border rounded-md bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 overflow-auto"
           >
@@ -46,15 +48,32 @@
             <div
               v-for="(result, index) in processedResults"
               :key="index"
-              class="mb-2"
+              class="mb-4"
             >
-              <code
-                class="block p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
-              >
-                {{ result.text }}
-              </code>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 Input: {{ result.input }}
+              </div>
+              <div
+                v-for="(match, matchIndex) in result.results"
+                :key="matchIndex"
+                class="mb-1"
+              >
+                <div class="relative group">
+                  <code
+                    class="block p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
+                  >
+                    {{ match.text }}
+                  </code>
+                  <div
+                    class="absolute left-0 w-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 z-10 mt-1"
+                  >
+                    <div
+                      class="p-2 bg-gray-800 text-white dark:bg-gray-600 text-xs rounded shadow-lg max-w-full overflow-hidden text-ellipsis"
+                    >
+                      Via: {{ match.targetLine }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -66,6 +85,7 @@
 
 <script lang="ts">
 import ipaddr from "ipaddr.js";
+import { useHead } from "#imports";
 
 export default {
   name: "CidrToolPage",
@@ -91,18 +111,6 @@ export default {
     this.processComparison();
   },
 
-  head() {
-    return {
-      title: "CIDR Tools",
-      meta: [
-        {
-          name: "description",
-          content: "CIDR Operations - Compare IPs and CIDR ranges",
-        },
-      ],
-    };
-  },
-
   methods: {
     // Process the comparison when either input changes
     processComparison() {
@@ -120,28 +128,42 @@ export default {
         .filter((line) => line.trim());
 
       let resultText = "";
-      let processedResults = [];
+      const processedResults = [];
 
       for (const inputLine of inputLines) {
         if (!inputLine.trim()) continue;
 
-        let resultsForThisInput = [];
+        const cleanedInput = this.extractIPorCIDR(inputLine.trim());
+        if (!cleanedInput) continue;
 
-        for (const targetLine of targetLines) {
-          if (!targetLine.trim()) continue;
+        const resultsForThisInput = [];
 
+        // Extract all valid target CIDRs first while preserving order
+        const validTargets = targetLines
+          .map((line) => {
+            const cidr = this.extractCIDR(line.trim());
+            return cidr ? { original: line.trim(), cidr } : null;
+          })
+          .filter((item) => item !== null);
+
+        // Check against each valid target in original order
+        for (const target of validTargets) {
           try {
             const comparisonResult = this.compareIPorCIDR(
-              inputLine.trim(),
-              targetLine.trim(),
+              cleanedInput,
+              target.cidr,
             );
             if (comparisonResult) {
               resultText += comparisonResult + "\n";
-              resultsForThisInput.push(comparisonResult);
+              resultsForThisInput.push({
+                text: comparisonResult,
+                targetLine: target.original,
+                extractedCIDR: target.cidr,
+              });
             }
           } catch (error) {
             console.error(
-              `Error comparing ${inputLine} with ${targetLine}:`,
+              `Error comparing ${cleanedInput} with ${target.cidr}:`,
               error,
             );
           }
@@ -149,8 +171,9 @@ export default {
 
         if (resultsForThisInput.length > 0) {
           processedResults.push({
-            input: inputLine.trim(),
-            text: resultsForThisInput.join("\n"),
+            input: cleanedInput,
+            originalInput: inputLine.trim(),
+            results: resultsForThisInput,
           });
         }
       }
@@ -194,7 +217,7 @@ export default {
         // Parse the CIDR range
         const cidrParts = cidr.split("/");
         const cidrAddr = ipaddr.parse(cidrParts[0]);
-        const cidrPrefix = parseInt(cidrParts[1], 10);
+        // const cidrPrefix = parseInt(cidrParts[1], 10);
 
         // Create a range from the CIDR
         const cidrRange =
@@ -216,12 +239,12 @@ export default {
         // Parse the first CIDR
         const cidr1Parts = cidr1.split("/");
         const cidr1Addr = ipaddr.parse(cidr1Parts[0]);
-        const cidr1Prefix = parseInt(cidr1Parts[1], 10);
+        // const cidr1Prefix = parseInt(cidr1Parts[1], 10);
 
         // Parse the second CIDR
         const cidr2Parts = cidr2.split("/");
         const cidr2Addr = ipaddr.parse(cidr2Parts[0]);
-        const cidr2Prefix = parseInt(cidr2Parts[1], 10);
+        // const cidr2Prefix = parseInt(cidr2Parts[1], 10);
 
         // Check for different IP versions
         if (cidr1Addr.kind() !== cidr2Addr.kind()) {
@@ -248,6 +271,42 @@ export default {
         console.error("CIDR overlap check error:", error);
         return false;
       }
+    },
+
+    // Extract IP address or CIDR from a string
+    extractIPorCIDR(text) {
+      // Match IPv4 or IPv6 address, with or without CIDR notation
+      const ipv4Pattern =
+        /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/(?:3[0-2]|[1-2][0-9]|[0-9]))?\b/;
+      const ipv6Pattern =
+        /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/(?:12[0-8]|1[0-1][0-9]|[1-9][0-9]|[0-9]))?\b/;
+
+      // Try to match IPv4 first, then IPv6
+      const ipv4Match = text.match(ipv4Pattern);
+      if (ipv4Match) return ipv4Match[0];
+
+      const ipv6Match = text.match(ipv6Pattern);
+      if (ipv6Match) return ipv6Match[0];
+
+      return null;
+    },
+
+    // Extract CIDR specifically (must have prefix)
+    extractCIDR(text) {
+      // Match IPv4 or IPv6 CIDR notation
+      const ipv4CIDRPattern =
+        /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:3[0-2]|[1-2][0-9]|[0-9])\b/;
+      const ipv6CIDRPattern =
+        /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\/(?:12[0-8]|1[0-1][0-9]|[1-9][0-9]|[0-9])\b/;
+
+      // Try to match IPv4 CIDR first, then IPv6 CIDR
+      const ipv4Match = text.match(ipv4CIDRPattern);
+      if (ipv4Match) return ipv4Match[0];
+
+      const ipv6Match = text.match(ipv6CIDRPattern);
+      if (ipv6Match) return ipv6Match[0];
+
+      return null;
     },
   },
 };
