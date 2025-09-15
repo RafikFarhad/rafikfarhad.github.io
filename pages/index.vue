@@ -22,7 +22,7 @@ useHead({
   meta: [
     {
       name: "description",
-      content: "Thoughts from Rafik Farhad",
+      content: "Echoes",
     },
   ],
 });

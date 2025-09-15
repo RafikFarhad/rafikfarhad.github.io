@@ -1,5 +1,5 @@
 {
-  "name": "thoughts-from-farhad",
+  "name": "echoes",
   "private": false,
   "type": "module",
   "scripts": {
@@ -28,5 +28,8 @@
   },
   "resolutions": {
     "string-width": "4.2.3"
+  },
+  "dependencies": {
+    "ipaddr.js": "^2.2.0"
   }
 }

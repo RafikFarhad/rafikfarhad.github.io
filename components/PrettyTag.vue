@@ -1,6 +1,6 @@
 <template>
   <div
-    class="inline-block text-xs font-medium me-2 px-2.5 py-0.5 text-slate-800 border-black border"
+    class="inline-block text-xs font-medium me-2 px-2.5 py-0.5 text-slate-800 dark:text-slate-200 border-black dark:border-gray-400 border dark:bg-gray-800"
   >
     {{ tag }}
   </div>

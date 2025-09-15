@@ -5,20 +5,23 @@
         <template v-if="show(snippet)">
           <NuxtLink
             :to="snippet._path"
-            class="text-slate-600 hover:text-slate-800 text-2xl"
+            class="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white text-2xl"
           >
             {{ snippet.title }}
           </NuxtLink>
-          <p class="mb-1">{{ snippet.description }}</p>
-          <p class="mb-1">
-            Posted: <strong>{{ formatDate(snippet.date) }}</strong>
+          <p class="mb-1 dark:text-gray-300">{{ snippet.description }}</p>
+          <p class="mb-1 dark:text-gray-300">
+            Posted:
+            <strong class="dark:text-white">{{
+              formatDate(snippet.date)
+            }}</strong>
           </p>
           <PrettyTag v-for="tag in snippet.tags" :key="tag" :tag="tag" />
         </template>
       </div>
     </template>
     <template #not-found>
-      <p>No snippets found.</p>
+      <p class="dark:text-gray-300">No snippets found.</p>
     </template>
   </ContentList>
 </template>
