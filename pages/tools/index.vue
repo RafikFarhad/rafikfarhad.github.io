@@ -36,6 +36,11 @@ export default {
         description: "Encode or decode HTML entities",
         link: "/tools/html-encoding",
       },
+      {
+        name: "Text Diff",
+        description: "Compare two text inputs and highlight the differences",
+        link: "/tools/text-diff",
+      },
     ],
   }),
 };
